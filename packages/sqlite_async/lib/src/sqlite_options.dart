@@ -1,3 +1,6 @@
+/// @docImport 'package:sqlite3/common.dart';
+library;
+
 final class WebSqliteOptions {
   final String workerUri;
   final String wasmUri;
@@ -43,6 +46,22 @@ final class SqliteOptions {
   /// additional readers on the web.
   final int maxReaders;
 
+  /// The amount of prepared statements to cache.
+  ///
+  /// For each SQLite connection, up to [preparedStatementCacheSize] statements
+  /// will be cached in an LRU cache. This allows re-using prepared statements
+  /// instead of parsing and optimizing them again, which improves performance
+  /// for frequently-used statements like watched queries.
+  ///
+  /// Be aware that active prepared statements may alter the operation of the
+  /// database, for instance because they might keep some database resources
+  /// locked. Statements are [CommonPreparedStatement.reset] before being stored
+  /// in the cache, but enabling a statement cache is still something that
+  /// should be tested carefully.
+  ///
+  /// This is currently disabled by default (set to `0`).
+  final int preparedStatementCacheSize;
+
   @Deprecated('Use default SqliteOptions constructor instead')
   const factory SqliteOptions.defaults() = SqliteOptions;
 
@@ -54,6 +73,7 @@ final class SqliteOptions {
     this.lockTimeout = const Duration(seconds: 30),
     this.profileQueries = _profileQueriesByDefault,
     this.maxReaders = defaultMaxReaders,
+    this.preparedStatementCacheSize = 0,
   });
 
   /// Creates a new options instance by applying overrides from parameters.
@@ -64,6 +84,7 @@ final class SqliteOptions {
     WebSqliteOptions? webSqliteOptions,
     bool? profileQueries,
     int? maxReaders,
+    int? preparedStatementCacheSize,
   }) {
     return SqliteOptions(
       journalMode: journalMode,
@@ -73,6 +94,8 @@ final class SqliteOptions {
       lockTimeout: lockTimeout,
       profileQueries: profileQueries ?? this.profileQueries,
       maxReaders: maxReaders ?? this.maxReaders,
+      preparedStatementCacheSize:
+          preparedStatementCacheSize ?? this.preparedStatementCacheSize,
     );
   }
 
