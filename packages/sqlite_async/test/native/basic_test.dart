@@ -58,6 +58,7 @@ void main() {
         await testUtils.testFactory(
             path: path, options: SqliteOptions(maxReaders: 3)),
       );
+      addTearDown(db.close);
       await db.initialize();
       await createTables(db);
 
@@ -90,6 +91,7 @@ void main() {
         await testUtils.testFactory(
             path: path, options: SqliteOptions(maxReaders: 3)),
       );
+      addTearDown(db.close);
       await db.initialize();
       await createTables(db);
 
@@ -366,6 +368,7 @@ void main() {
     test('invokes beforeOpen callback on factories', () async {
       final factoy = _BeforeSetupHook(path: path);
       final db = SqliteDatabase.withFactory(factoy);
+      addTearDown(db.close);
       expect(factoy.didCallBeforeOpen, isFalse);
       await db.initialize();
 

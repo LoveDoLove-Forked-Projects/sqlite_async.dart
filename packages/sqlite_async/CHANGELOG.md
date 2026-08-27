@@ -1,3 +1,7 @@
+## 0.14.5
+
+- Make `close()` wait for the database to actually be closed.
+
 ## 0.14.4
 
 - Native: Add the `NativeSqliteOpenFactory.beforeOpen` method, which can be overridden to configure

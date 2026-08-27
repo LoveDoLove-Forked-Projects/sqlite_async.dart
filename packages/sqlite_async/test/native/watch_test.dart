@@ -41,6 +41,7 @@ void main() {
           (await testUtils.testFactory(path: path)) as NativeSqliteOpenFactory;
       final db = factory.openNativeConnection(
           SqliteOpenOptions(primaryConnection: true, readOnly: false));
+      addTearDown(db.close);
 
       db.execute('CREATE TABLE a (bar INTEGER);');
       db.execute('CREATE TABLE b (bar INTEGER);');
@@ -148,8 +149,8 @@ void main() {
       final reads = StreamQueue(db.updates);
       final first = reads.next;
 
-      db.writeLock((ctx) async {
-        await ctx.execute('INSERT INTO customer(name) VALUES (?)', ['test']);
+      await db.writeLock((ctx) async {
+        await ctx.execute('INSERT INTO customers(name) VALUES (?)', ['test']);
         // Because we're not in a transaction, this should emit an update. We
         // shouldn't just collect updates at the end of writeLock to avoid
         // long-running writers never emitting updates.

@@ -40,7 +40,7 @@ final class NativeSqliteDatabaseImpl extends SqliteDatabaseImpl {
 
     return pool;
   });
-  bool _isClosed = false;
+  Future<void>? _closing;
   final _lockGuard = Object();
 
   @override
@@ -66,7 +66,7 @@ final class NativeSqliteDatabaseImpl extends SqliteDatabaseImpl {
 
   @override
   bool get closed {
-    return _isClosed;
+    return _closing != null;
   }
 
   /// Returns true if the _write_ connection is in auto-commit mode
@@ -84,14 +84,20 @@ final class NativeSqliteDatabaseImpl extends SqliteDatabaseImpl {
   }
 
   @override
-  Future<void> close() async {
-    _isClosed = true;
-    final pool = await _pool;
-    pool.close();
+  Future<void> close() {
+    _checkNotLocked('close');
 
-    while (_workers.isNotEmpty) {
-      _workers.removeFirst().close();
-    }
+    return _closing ??= Future.sync(() async {
+      final pool = await _pool;
+
+      // Acquire all connections to ensure this doesn't race with any leased
+      // connection.
+      final allConnections = await pool.exclusiveAccess();
+      pool.close(); // Prevent subsequent pool requests.
+
+      await _workers.map((e) => e.close()).wait;
+      allConnections.close();
+    });
   }
 
   @override
@@ -224,11 +230,7 @@ final class NativeSqliteDatabaseImpl extends SqliteDatabaseImpl {
   }
 
   void _returnIsolateWorker(IsolateWorker worker) {
-    if (_isClosed) {
-      worker.close();
-    } else {
-      _workers.addLast(worker);
-    }
+    _workers.addLast(worker);
   }
 
   void _checkNotLocked(String? debugContext) {

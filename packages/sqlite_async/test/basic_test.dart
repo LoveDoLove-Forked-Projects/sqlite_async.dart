@@ -303,7 +303,7 @@ void main() {
       final hasLock = Completer<void>();
 
       final db = await testUtils.setupDatabase(path: path);
-      db.withAllConnections((writer, readers) async {
+      final allConnections = db.withAllConnections((writer, readers) async {
         hasLock.complete();
         await releaseLock.future;
       });
@@ -318,6 +318,9 @@ void main() {
         db.abortableWriteLock((_) async {}, abortTrigger: Future.value(null)),
         throwsAbortException,
       );
+
+      releaseLock.complete();
+      await allConnections;
     });
 
     test('execute single statement with RETURNING populates ResultSet',
@@ -445,6 +448,7 @@ void main() {
         await testUtils.testFactory(
             path: path, options: SqliteOptions(maxReaders: maxReaders)),
       );
+      addTearDown(db.close);
       await db.initialize();
       await createTables(db);
 
@@ -512,6 +516,17 @@ void main() {
         expect(row.values.map((e) => e.runtimeType), [int, double]);
       });
     }, skip: identical(0, 0.0) ? 'Requires 64-bit ints' : false);
+
+    test('cannot use closed databases', () async {
+      final db = await testUtils.setupDatabase(path: path);
+
+      await db.initialize();
+      await db.close();
+      expect(db.closed, isTrue);
+
+      await expectLater(db.execute('SELECT 1'), throwsA(anything));
+      await expectLater(db.get('SELECT 1'), throwsA(anything));
+    });
   });
 }
 
